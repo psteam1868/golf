@@ -41,6 +41,10 @@ function isMine(player){return player.player_id===s.playerId}
 
 function renderScorecard(){
   const grid=$('scoreGrid');
+  if(!grid){
+    console.error('scoreGrid not found. Please refresh to load the latest PWA.');
+    return;
+  }
   const holes=Array.from({length:18},(_,i)=>i+1);
   const mine=s.players.find(p=>p.player_id===s.playerId)||s.players[0];
   if(!s.playerId&&mine)s.playerId=mine.player_id;
