@@ -64,3 +64,31 @@
   .bulk-row{padding:8px}
   .bulk-score-btn{flex-basis:34px;height:34px}
 }
+
+/* v18 mobile readability + status/result refinements */
+.match-status-cell.status-game{color:#111;font-weight:900}
+.match-status-cell.status-up{color:var(--blue);font-weight:900}
+.match-status-cell.status-down{color:var(--red);font-weight:900}
+.match-status-cell.status-square{color:#111;font-weight:900}
+.result-scroll{overflow:visible}
+.result-table{min-width:0;width:100%;table-layout:fixed}
+.result-table th,.result-table td{padding:8px 4px;font-size:12px;white-space:nowrap}
+.result-table th:first-child,.result-table td:first-child{width:25%;overflow:hidden;text-overflow:ellipsis}
+.result-table th:not(:first-child),.result-table td:not(:first-child){width:15%}
+@media(max-width:640px){
+  .score-table thead tr:nth-child(1) th,.score-table thead tr:nth-child(2) th,.score-table thead tr:nth-child(3) th{height:30px;font-size:10px}
+  .score-table thead tr:nth-child(1) th:first-child,.score-table thead tr:nth-child(2) th:first-child,.score-table thead tr:nth-child(3) th:first-child{font-size:10px}
+  .matrix{min-width:0;width:100%;table-layout:fixed}
+  .matrix th,.matrix td{height:46px;font-size:11px}
+  .matrix th:first-child{min-width:68px;width:22%}
+  .matrix th:not(:first-child),.matrix td:not(:first-child){width:auto}
+  .matrix td:first-child{min-width:68px;width:22%;padding-left:8px;overflow:hidden;text-overflow:ellipsis}
+  .handicap-select{width:42px;height:36px;border-radius:9px;font-size:12px;padding:0 3px}
+  .auto-value{font-size:13px}
+  .handicap-panel{width:100%;padding:12px 8px 16px}
+  .help{font-size:11px}
+  .legend{gap:8px;font-size:11px}
+  .result-card{margin:10px 8px}
+  .result-title{padding:10px 12px;font-size:15px}
+  .result-table th,.result-table td{padding:8px 2px;font-size:11px}
+}
