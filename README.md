@@ -1,18 +1,19 @@
-# Golf Game PWA v2
+# Golf Game PWA v3
 
-本版本已把球场资料从浏览器 localStorage 改为 Google Apps Script + Google Sheet `COURSES`。
+本版本解决 GitHub Pages 调用 Google Apps Script 时的 CORS / NetworkError：PWA 使用 JSONP 与 Apps Script 通讯。
 
-功能：
-- 创建比赛时必须选择永久球场
-- 球场名称 + 18洞 Par + SI 从 Google 数据库读取
-- 新增球场直接写入 `COURSES`
-- 不提供普通用户删除球场
-- 比赛创建时保存 `course_id`
-- 比赛进入后按 `course_id` 读取球场并显示每洞 Par / SI
-- 保留原来的创建/加入比赛、成绩、UP、自动刷新、PWA 安装
+## 部署
+1. 先按 `APPS_SCRIPT_JSONP_PATCH.txt` 修改 Apps Script 的 `doGet(e)`。
+2. 保存并部署 Web App 新版本；正式 `/exec` 地址可以保持原地址。
+3. 将本目录中的 `index.html`、`app.js`、`style.css`、`manifest.json`、`service-worker.js` 和 `icons/` 上传到 GitHub Pages 仓库根目录。
+4. 等 GitHub Pages 更新后，强制刷新一次浏览器。
 
-部署前：
-1. 按 `APPS_SCRIPT_COURSE_MATCH_PATCH.txt` 修改 Apps Script。
-2. 重新部署 Web App（Deploy > Manage deployments > Edit > New version）。
-3. 用新的 Web App URL 替换 index.html 中的 GOLF_API_URL（如果 URL 没变则无需替换）。
-4. 发布 PWA。
+## 已接入
+- Google COURSES 永久数据库
+- 球场列表
+- 新增球场
+- 创建比赛时绑定 course_id
+- 比赛页面显示 18 洞 Par / SI
+- JSONP 跨域通讯
+
+不要删除现有 COURSES 数据。
