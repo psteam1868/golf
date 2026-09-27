@@ -92,3 +92,7 @@
   .result-title{padding:10px 12px;font-size:15px}
   .result-table th,.result-table td{padding:8px 2px;font-size:11px}
 }
+
+/* v23 alternating player-name background */
+.player-row.alt td:first-child{background:#f2f4f3!important;}
+.player-row:not(.alt) td:first-child{background:#fff!important;}
