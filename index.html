@@ -1,74 +1,20 @@
 <!doctype html>
-<html lang="en"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0b3d2e"><meta name="apple-mobile-web-app-capable" content="yes">
-<link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icons/icon-192.png">
-<link rel="stylesheet" href="style.css"><title>Golf Game</title></head>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#084f3c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="styles.css?v=11">
+  <title>Golf Game</title>
+</head>
 <body>
-<header><b>🏌️ Golf Game</b><span id="headerGameId"></span><button id="headerQr" class="header-qr" hidden aria-label="Show QR">▦</button></header>
-<main>
-<section id="home">
-  <div class="home-hero-bg" aria-hidden="true"></div><div class="home-actions">
-    <button class="home-action primary" id="showJoin"><span>👥</span>Join Game <i>›</i></button>
-    <button class="home-action primary" id="showNew"><span>＋</span>New Game <i>›</i></button>
-    <button class="home-action course-action" id="courses"><span>⚑</span>Course <i>›</i></button>
-  </div>
-  <div id="joinPanel" class="card action-panel" hidden>
-    <button class="back inline-back" id="joinBack">‹ Home</button>
-    <h2>Join Game</h2>
-    <label>Game ID<input id="mid" placeholder="Enter Game ID" autocomplete="off"></label>
-    <label>Your Name<input id="name" placeholder="Enter your name" autocomplete="name" maxlength="20"></label>
-    <label>Join Code <small class="optional">optional</small><input id="joinCode" placeholder="Enter Join Code" autocomplete="off"></label>
-    <button id="join">Join</button>
-  </div>
-  <div id="newPanel" class="card action-panel" hidden>
-    <button class="back inline-back" id="newBack">‹ Home</button>
-    <h2>New Game</h2>
-    <label>Game ID<input id="gameId" placeholder="Enter Game ID" maxlength="30" autocomplete="off"></label>
-    <label>Admin<input id="admin" placeholder="Name" autocomplete="name"></label>
-    <label>Course<select id="course"></select></label>
-    <label>Players</label><div id="countBtns" class="choice"></div>
-    <div id="playerNames"></div>
-    <button id="openMatrix" class="secondary">Handicap Matrix</button>
-    <div id="matrixStatus" class="matrix-status">Set pairwise strokes before Start.</div>
-    <button id="create">Start</button>
-  </div>
-</section>
-
-<section id="coursePage" hidden><button class="back" id="courseBack">‹ Home</button><h2>Courses</h2>
-<div class="card"><h3 id="courseFormTitle">Add Course</h3>
-<label>Course Name<input id="cname" placeholder="Course name"></label>
-<div class="tablewrap"><div class="coursehead"><b>Hole</b><b>PAR</b><b>Index</b></div><div id="holes"></div></div>
-<button id="saveCourse">Save</button><button id="cancelEdit" class="secondary" hidden>Cancel</button></div>
-<div class="card"><h3>Saved Courses</h3><div id="saved"></div></div></section>
-
-<section id="matchPage" hidden><button class="back" id="matchBack">‹ Home</button>
-<div class="mode-tabs"><button id="modeF9" class="mode-tab active">F9</button><button id="modeB9" class="mode-tab">B9</button><button id="modeBaccarat" class="mode-tab">Baccarat</button></div>
-<div class="card scorecard-card">
-  <div class="score-scroll" id="scoreScroll"><div class="score-grid" id="scoreGrid"></div></div>
-</div>
-<div class="hole-nav"><button id="prev">‹ Prev</button><div><b id="holeLabel">Hole <span id="hole">1</span> / 9</b></div><button id="next">Next ›</button></div>
-<div id="resultCard" class="card result-card" hidden></div>
-</section>
-</main>
-
-<div id="qrModal" class="modal" hidden><div class="modal-box qr-box"><div class="modal-head"><b>Join Game</b><button id="closeQr" class="icon-btn">×</button></div><img id="qrImage" class="qr-image" alt="QR Code"><div id="qrGameId" class="qr-game-id"></div><p class="qr-help">Scan this QR code to join the game</p><button id="copyJoin" class="secondary">Copy Join Link</button></div></div>
-<div id="scoreModal" class="modal" hidden>
-  <div class="modal-box">
-    <div class="modal-head"><b id="modalTitle">Score</b><button id="closeModal" class="icon-btn">×</button></div>
-    <div id="scoreChoices" class="score-choices"></div>
-    <label class="up-check"><input id="modalUp" type="checkbox"> <span>UP</span></label>
-    <div class="modal-actions"><button id="modalCancel" class="secondary">Cancel</button><button id="modalSave">Save</button></div>
-  </div>
-</div>
-<div id="matrixModal" class="modal" hidden>
-  <div class="modal-box matrix-box">
-    <div class="modal-head"><b>Handicap Matrix</b><button id="closeMatrix" class="icon-btn">×</button></div>
-    <p class="matrix-help">Enter the strokes the row player gives the column player. The reverse side is automatic.</p>
-    <div id="matrixGrid" class="matrix-grid"></div>
-    <div class="modal-actions"><button id="matrixCancel" class="secondary">Cancel</button><button id="matrixSave">Save</button></div>
-  </div>
-</div>
-<div id="toast"></div>
-<script>window.GOLF_API_URL="https://script.google.com/macros/s/AKfycbyALu60ZEkfMGeha-yDUKPka1wgFS3Ry_4TuB3HbGwdMP9bbVa6NmQ8NG4xuRQTZjRo/exec";</script>
-<script src="app.js?v=10.0"></script></body></html>
+<div id="app"></div>
+<script src="app.js?v=11"></script>
+<script>
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js?v=11').catch(()=>{});
+</script>
+</body>
+</html>

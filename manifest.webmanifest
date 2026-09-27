@@ -1,0 +1,9 @@
+{
+  "name":"Golf Game",
+  "short_name":"Golf Game",
+  "start_url":"./",
+  "display":"standalone",
+  "background_color":"#f4f8f6",
+  "theme_color":"#084f3c",
+  "icons":[]
+}
