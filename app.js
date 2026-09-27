@@ -154,6 +154,7 @@ function renderScorecard(){
     grid.innerHTML=rows.join('');
   }
   $('hole').textContent=s.hole;
+  renderMatchResult();
 }
 
 function renderBaccaratGrid(holes,mine){
@@ -173,6 +174,78 @@ function renderBaccaratGrid(holes,mine){
 function baccaratTotal(p){
   const vals=s.scores.filter(x=>x.player_id===p.player_id&&x.points!=null).map(x=>Number(x.points)).filter(Number.isFinite);
   return vals.length?vals.reduce((a,b)=>a+b,0):'—';
+}
+
+
+function segmentHoles(){ return s.mode==='F9' ? [1,2,3,4,5,6,7,8,9] : [10,11,12,13,14,15,16,17,18]; }
+function pairSequence(me,opp,holes){
+  return holes.map(h=>pairResult(me,opp,h));
+}
+function gameDecisionIndex(seq){
+  let state=0;
+  for(let i=0;i<seq.length;i++){
+    if(seq[i]==='W')state++; else if(seq[i]==='L')state--;
+    const remaining=seq.length-i-1;
+    if(Math.abs(state)>remaining) return {index:i,state};
+  }
+  return null;
+}
+function resultForPair(me,opp){
+  const holes=segmentHoles();
+  const seq=pairSequence(me,opp,holes);
+  let state=0;
+  seq.forEach(r=>{if(r==='W')state++;else if(r==='L')state--;});
+  const decision=gameDecisionIndex(seq);
+  // Game: +3 only when the segment ends with a win; any non-win is -1.
+  const game=state>0?3:-1;
+  // If the game is never decided and finishes square, the overall result is -1.
+  // Tommy is the final UP/DW state, independent of when the game was decided.
+  const tommy=state>0?1:state<0?-1:0;
+  let buy=0;
+  if(decision && decision.index<seq.length-1){
+    let buyState=0;
+    for(let i=decision.index+1;i<seq.length;i++){
+      if(seq[i]==='W')buyState++; else if(seq[i]==='L')buyState--;
+    }
+    buy=buyState>0?1:buyState<0?-1:0;
+  }
+  let bonus=0;
+  const par3=holes.filter(h=>Number(holeInfo(h)?.par)===3);
+  const par5=holes.filter(h=>Number(holeInfo(h)?.par)===5);
+  if(par3.length===2 && par3.every(h=>qualifiesParOrBetter(me,h))) bonus+=1;
+  if(par5.length===2 && par5.every(h=>qualifiesParOrBetter(me,h))) bonus+=1;
+  holes.forEach(h=>{bonus+=holeBonus(me,h)});
+  return {game,tommy,buy,bonus,total:game+tommy+buy+bonus,decision,seq,state};
+}
+function qualifiesParOrBetter(player,h){
+  const rec=scoreFor(player.player_id,h); if(!rec||rec.score===''||rec.score==null)return false;
+  return Number(rec.score)<=Number(holeInfo(h)?.par);
+}
+function holeBonus(player,h){
+  const rec=scoreFor(player.player_id,h); if(!rec||rec.score===''||rec.score==null)return 0;
+  const score=Number(rec.score), par=Number(holeInfo(h)?.par);
+  if(!Number.isFinite(score)||!Number.isFinite(par))return 0;
+  if(par===3 && score===1)return 12;
+  if(score<=par-2)return 6;
+  if(score===par-1)return 1;
+  return 0;
+}
+function renderMatchResult(){
+  const box=$('resultCard');
+  if(!box)return;
+  if(isBaccarat()){box.hidden=true;box.innerHTML='';return;}
+  const me=s.players.find(p=>p.player_id===s.playerId)||s.players[0];
+  if(!me){box.hidden=true;return;}
+  const opponents=s.players.filter(p=>p.player_id!==me.player_id);
+  if(!opponents.length){box.hidden=true;return;}
+  const title=s.mode==='F9'?'Front 9 Result':'Back 9 Result';
+  const rows=opponents.map(p=>{
+    const r=resultForPair(me,p);
+    const cls=n=>n>0?'result-pos':n<0?'result-neg':'result-zero';
+    return `<div class="result-row"><div class="result-player">${esc(p.name)}</div><div class="${cls(r.game)}">${r.game>0?'+':''}${r.game}</div><div class="${cls(r.tommy)}">${r.tommy>0?'+':''}${r.tommy}</div><div class="${cls(r.buy)}">${r.buy>0?'+':''}${r.buy}</div><div class="${cls(r.bonus)}">${r.bonus>0?'+':''}${r.bonus}</div><div class="${cls(r.total)}">${r.total>0?'+':''}${r.total}</div></div>`;
+  }).join('');
+  box.innerHTML=`<h3>${title}</h3><div class="result-head"><span>Player</span><span>Game</span><span>Tommy</span><span>Buy</span><span>Bonus</span><span>Total</span></div>${rows}`;
+  box.hidden=false;
 }
 
 function matrixValue(a,b){
