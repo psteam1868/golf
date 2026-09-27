@@ -1,0 +1,64 @@
+Golf Game — COURSES + MATCHES course_id 补丁
+
+目的：让比赛真正绑定永久球场。COURSES 永久保存；MATCHES 只保存 course_id。
+
+一、SHEETS 保持：
+const SHEETS = {
+  MATCHES: 'MATCHES',
+  PLAYERS: 'PLAYERS',
+  SCORES: 'SCORES',
+  COURSES: 'COURSES'
+};
+
+二、setupDatabase() 的 MATCHES 表头必须包含 course_id。
+如果你原来是：
+match_id, date, admin, player_count, status
+改成：
+match_id, date, admin, player_count, status, course_id
+
+注意：如果 MATCHES 已经有旧数据，不要删除旧数据。可在表头最后新增一列 course_id。
+
+三、创建比赛 API
+在 doPost(e) 的 createMatch 分支，把 data.course_id 传给 createMatch_：
+return json_(createMatch_(data));
+
+并确保 createMatch_ 在建立 MATCHES 新行时写入 data.course_id，例如：
+[
+  matchId,
+  new Date(),
+  data.admin,
+  Number(data.player_count),
+  'OPEN',
+  data.course_id
+]
+
+创建比赛前建议验证：
+if (!data.course_id) return {success:false,error:'请选择球场'};
+const course = getCourse_(data.course_id);
+if (!course || !course.success) return {success:false,error:'球场不存在'};
+
+四、getMatch API
+读取 MATCHES 时，把 course_id 一起返回：
+match: {
+  match_id: row[0],
+  date: row[1],
+  admin: row[2],
+  player_count: row[3],
+  status: row[4],
+  course_id: row[5] || ''
+}
+
+这样新版 PWA 会自动根据 course_id 调用 getCourse，显示正确的 18 洞 Par / SI。
+
+五、COURSES API
+你刚才已经成功建立 COURSES，因此保留之前加入的：
+- getCourses
+- getCourse
+- createCourse
+以及 COURSES 永久保存逻辑。
+
+六、不要提供普通用户删除 COURSES 的 API。
+球场资料作为永久资料保留。以后如果发现错误，做管理员编辑/更新 API，而不是删除。
+
+七、非常重要：如果你现有 createMatch_ 的 MATCHES 列顺序不是上面的顺序，不要整行照抄。
+只需要把 course_id 写到你新增的 course_id 那一列，并让 getMatch 从同一列读取即可。

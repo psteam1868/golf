@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b3d2e"><meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css"><title>Golf Game</title></head>
+<body>
+<header><b>🏌️ Golf Game</b><button id="install" hidden>安装</button></header>
+<main>
+<section id="home">
+<h1>Golf Game</h1>
+<div class="card"><h2>创建比赛</h2>
+<label>管理员姓名<input id="admin" placeholder="姓名"></label>
+<label>人数<select id="count"><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select></label>
+<label>球场<select id="course"></select></label>
+<button id="create">创建比赛</button>
+</div>
+<div class="card"><h2>加入比赛</h2>
+<label>比赛编号<input id="mid" placeholder="G260927-XXXX"></label>
+<label>姓名<input id="name" placeholder="姓名"></label>
+<button id="join">加入比赛</button></div>
+<div class="card"><h2>球场资料</h2><p>球场名称 + 18洞 Par + SI 永久保存在 Google 数据库，可供以后比赛继续使用。</p><button id="courses">管理球场</button></div>
+</section>
+
+<section id="coursePage" hidden><button class="back">‹ 返回</button><h2>球场资料</h2>
+<div class="card"><label>球场名称<input id="cname" placeholder="例如：ABC Golf Club"></label><div id="holes"></div><button id="saveCourse">新增球场</button></div>
+<div class="card"><h3>已保存球场</h3><div id="saved"></div></div></section>
+
+<section id="matchPage" hidden><button class="back">‹ 首页</button>
+<div class="card"><h2 id="matchId"></h2><div id="courseName"></div></div>
+<div class="hole"><button id="prev">‹</button><div><b>HOLE <span id="hole">1</span> / 18</b><div id="parsi">PAR — · SI —</div></div><button id="next">›</button></div>
+<div class="card"><h3>球员</h3><div id="players"></div></div>
+<div class="card"><h3>我的成绩</h3><div id="mine"></div></div>
+<div class="card"><h3>当前洞成绩</h3><div id="scores"></div></div>
+</section>
+</main><div id="toast"></div>
+<script>window.GOLF_API_URL="https://script.google.com/macros/s/AKfycbyipQr5dxqGykzbgmqB2JWkFr6u8jEYxLvcPqlrY5aQAbl2zu0peorlIYYcU0soHMyD/exec";</script>
+<script src="app.js"></script></body></html>
