@@ -32,12 +32,25 @@
 <div class="card"><h3>Saved Courses</h3><div id="saved"></div></div></section>
 
 <section id="matchPage" hidden><button class="back">‹ Home</button>
-<div class="card"><h2 id="matchId"></h2><div id="courseName"></div></div>
-<div class="hole"><button id="prev">‹</button><div><b>HOLE <span id="hole">1</span> / 18</b><div id="parsi">PAR — · SI —</div></div><button id="next">›</button></div>
+<div class="match-top"><div><h2 id="matchId"></h2><div id="courseName"></div></div><div class="view-label">P1 View</div></div>
+<div class="card scorecard-card">
+  <div class="score-scroll" id="scoreScroll">
+    <div class="score-grid" id="scoreGrid"></div>
+  </div>
+</div>
+<div class="hole-nav"><button id="prev">‹ Prev</button><div><b>Hole <span id="hole">1</span> / 18</b></div><button id="next">Next ›</button></div>
 <div class="card"><h3>Players</h3><div id="players"></div></div>
-<div class="card"><h3>My Score</h3><div id="mine"></div></div>
-<div class="card"><h3>Hole Scores</h3><div id="scores"></div></div>
 </section>
-</main><div id="toast"></div>
+</main>
+
+<div id="scoreModal" class="modal" hidden>
+  <div class="modal-box">
+    <div class="modal-head"><b id="modalTitle">Score</b><button id="closeModal" class="icon-btn">×</button></div>
+    <div id="scoreChoices" class="score-choices"></div>
+    <label class="up-check"><input id="modalUp" type="checkbox"> <span>UP</span></label>
+    <div class="modal-actions"><button id="modalCancel" class="secondary">Cancel</button><button id="modalSave">Save</button></div>
+  </div>
+</div>
+<div id="toast"></div>
 <script>window.GOLF_API_URL="https://script.google.com/macros/s/AKfycbyALu60ZEkfMGeha-yDUKPka1wgFS3Ry_4TuB3HbGwdMP9bbVa6NmQ8NG4xuRQTZjRo/exec";</script>
-<script src="app.js?v=6"></script></body></html>
+<script src="app.js?v=7"></script></body></html>
