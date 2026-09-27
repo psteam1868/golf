@@ -1,11 +1,13 @@
 const API=window.GOLF_API_URL;
 const $=x=>document.getElementById(x);
 let courses=[];
-let s={match:null,players:[],playerId:null,hole:1,course:null,scores:[],mode:'F9'};
+let s={match:null,players:[],playerId:null,hole:1,course:null,scores:[],mode:'F9',handicapMatrix:null};
 let editingCourseId=null;
 let playerCount=2;
 let deferred;
 let modalHole=1;
+let handicapDraft={};
+let matrixPlayers=[];
 
 function toast(x){$('toast').textContent=x;$('toast').classList.add('show');setTimeout(()=>$('toast').classList.remove('show'),2400)}
 function page(id){['home','coursePage','matchPage'].forEach(x=>$(x).hidden=x!==id)}
@@ -33,7 +35,71 @@ window.editCourse=id=>{const c=courses.find(x=>x.course_id===id);if(!c)return;ed
 $('cancelEdit').onclick=resetCourseForm;
 $('saveCourse').onclick=async()=>{const name=$('cname').value.trim();if(!name)return toast('Enter course name');const holes=[...document.querySelectorAll('.hr')].map((r,i)=>({hole:i+1,par:+r.querySelector('.par').value,si:+r.querySelector('.si').value}));if(holes.length!==18||holes.some(h=>!Number.isInteger(h.par)||h.par<3||h.par>6||!Number.isInteger(h.si)||h.si<1||h.si>18)||new Set(holes.map(h=>h.si)).size!==18)return toast('PAR 3-6; Index 1-18, each once');const dup=courses.some(c=>c.course_id!==editingCourseId&&c.course_name.trim().toLowerCase()===name.toLowerCase());if(dup)return toast('Course already exists');$('saveCourse').disabled=true;try{const action=editingCourseId?'updateCourse':'createCourse';const data=editingCourseId?{action,course_id:editingCourseId,course_name:name,holes}:{action,course_name:name,holes};const r=await post(data);if(!r.success)return toast(r.error||'Save failed');toast(editingCourseId?'Course updated':'Course saved');await loadCourses();resetCourseForm()}catch(e){toast('Save failed: '+e.message)}finally{$('saveCourse').disabled=false}};
 
-$('create').onclick=async()=>{const gameId=$('gameId').value.trim(),admin=$('admin').value.trim(),course_id=$('course').value;const names=[...document.querySelectorAll('.pname')].map(x=>x.value.trim());if(!gameId)return toast('Enter Game ID');if(!admin)return toast('Enter admin name');if(!course_id)return toast('Select course');if(names.length<2||names.length>6)return toast('Players must be 2-6');if(names.some(x=>!x))return toast('Enter all player names');const normalized=names.map(x=>x.toLowerCase());if(new Set(normalized).size!==normalized.length)return toast('Player names must be unique');$('create').disabled=true;try{const r=await post({action:'createMatch',match_id:gameId,admin,course_id,players:names});if(!r.success)return toast(r.error||'Create failed');s={match:null,players:[],playerId:null,hole:1,course:null,scores:[],mode:'F9'};rememberName(gameId,names[0]);await enter(r.match_id||gameId,names[0]);toast('Game created')}catch(e){toast('Create failed: '+e.message)}finally{$('create').disabled=false}};
+
+function initHandicapDraft(){
+  const names=[...document.querySelectorAll('.pname')].map(x=>x.value.trim());
+  const ids=names.map((_,i)=>'draft_'+i);
+  matrixPlayers=names.map((name,i)=>({player_id:ids[i],name:name||`Player ${i+1}`}));
+  const next={};
+  ids.forEach(a=>{next[a]={};ids.forEach(b=>{next[a][b]=0})});
+  // Keep existing draft values by player index.
+  matrixPlayers.forEach((a,i)=>matrixPlayers.forEach((b,j)=>{
+    if(a.player_id===b.player_id)return;
+    const oldKey=`draft_${i}`;
+    const oldTo=`draft_${j}`;
+    if(handicapDraft[oldKey] && handicapDraft[oldKey][oldTo]!=null)next[a.player_id][b.player_id]=handicapDraft[oldKey][oldTo];
+  }));
+  handicapDraft=next;
+}
+function renderHandicapMatrix(){
+  initHandicapDraft();
+  const ids=matrixPlayers.map(p=>p.player_id);
+  const head='<div class="matrix-corner">GIVE</div>'+matrixPlayers.map(p=>`<div class="matrix-head">${esc(p.name).slice(0,10)}</div>`).join('');
+  const rows=matrixPlayers.map((p,i)=>{
+    const cells=matrixPlayers.map((q,j)=>{
+      if(i===j)return '<div class="matrix-cell diag">—</div>';
+      if(j<i){
+        const v=Number(handicapDraft[p.player_id]?.[q.player_id]||0);
+        return `<div class="matrix-cell auto ${v<0?'recv':''}">${v>0?'-'+v:v<0?'+'+Math.abs(v):'0'}</div>`;
+      }
+      const v=Number(handicapDraft[p.player_id]?.[q.player_id]||0);
+      return `<div class="matrix-cell"><input type="number" min="-18" max="18" step="1" value="${Number.isFinite(v)?v:0}" data-from="${p.player_id}" data-to="${q.player_id}"></div>`;
+    }).join('');
+    return `<div class="matrix-name">${esc(p.name)}</div>${cells}`;
+  }).join('');
+  $('matrixGrid').innerHTML=head+rows;
+  $('matrixGrid').style.gridTemplateColumns=`minmax(78px,1fr) repeat(${matrixPlayers.length},minmax(54px,1fr))`;
+}
+function captureMatrixInputs(){
+  document.querySelectorAll('#matrixGrid input[data-from]').forEach(inp=>{
+    const a=inp.dataset.from,b=inp.dataset.to,v=Number(inp.value||0);
+    if(!handicapDraft[a])handicapDraft[a]={};
+    if(!handicapDraft[b])handicapDraft[b]={};
+    handicapDraft[a][b]=Number.isFinite(v)?Math.trunc(v):0;
+    handicapDraft[b][a]=Number.isFinite(v)?-Math.trunc(v):0;
+  });
+}
+function matrixPayloadForNames(){
+  const names=[...document.querySelectorAll('.pname')].map(x=>x.value.trim());
+  return names.map((_,i)=>names.map((__,j)=>i===j?0:Number(handicapDraft[`draft_${i}`]?.[`draft_${j}`]||0)));
+}
+$('openMatrix').onclick=()=>{
+  const names=[...document.querySelectorAll('.pname')].map(x=>x.value.trim());
+  if(names.length<2||names.some(x=>!x))return toast('Enter all player names first');
+  renderHandicapMatrix();$('matrixModal').hidden=false;
+};
+$('closeMatrix').onclick=()=>{$('matrixModal').hidden=true};
+$('matrixCancel').onclick=()=>{$('matrixModal').hidden=true};
+$('matrixSave').onclick=()=>{
+  captureMatrixInputs();
+  $('matrixModal').hidden=true;
+  $('matrixStatus').textContent='Handicap Matrix ready';
+  $('matrixStatus').classList.add('ready');
+};
+
+$('create').onclick=async()=>{const gameId=$('gameId').value.trim(),admin=$('admin').value.trim(),course_id=$('course').value;const names=[...document.querySelectorAll('.pname')].map(x=>x.value.trim());if(!gameId)return toast('Enter Game ID');if(!admin)return toast('Enter admin name');if(!course_id)return toast('Select course');if(names.length<2||names.length>6)return toast('Players must be 2-6');if(names.some(x=>!x))return toast('Enter all player names');const normalized=names.map(x=>x.toLowerCase());if(new Set(normalized).size!==normalized.length)return toast('Player names must be unique');$('create').disabled=true;try{if(Object.keys(handicapDraft).length===0)renderHandicapMatrix();
+const matrixPayload=matrixPayloadForNames();
+const r=await post({action:'createMatch',match_id:gameId,admin,course_id,players:names,handicap_matrix:matrixPayload});if(!r.success)return toast(r.error||'Create failed');s={match:null,players:[],playerId:null,hole:1,course:null,scores:[],mode:'F9'};rememberName(gameId,names[0]);await enter(r.match_id||gameId,names[0]);toast('Game created')}catch(e){toast('Create failed: '+e.message)}finally{$('create').disabled=false}};
 
 function rememberName(gameId,name){if(gameId&&name)localStorage.setItem('golf_player_name_'+gameId.trim().toUpperCase(),name.trim())}
 function rememberedName(gameId){return gameId?localStorage.getItem('golf_player_name_'+gameId.trim().toUpperCase())||'':''}
@@ -43,7 +109,7 @@ $('name').addEventListener('input',()=>{const gid=$('mid').value.trim();if(gid&&
 
 $('join').onclick=async()=>{const match_id=$('mid').value.trim(),name=$('name').value.trim(),joinCode=$('joinCode').value.trim();if(!match_id||!name)return toast('Enter Game ID and name');rememberName(match_id,name);$('join').disabled=true;try{const r=await post({action:'joinMatch',match_id,name,join_code:joinCode});if(!r.success)return toast(r.error||'Join failed');const p=r.player||{};s.playerId=p.player_id||r.player_id||null;await enter(r.match_id||match_id,name);toast('Joined')}catch(e){toast('Join failed: '+e.message)}finally{$('join').disabled=false}};
 
-async function enter(id,preferredName){const r=await get({action:'getMatch',match_id:id});if(!r.success)return toast(r.error||'Load game failed');s.match=r.match;s.players=r.players||[];if(!s.playerId&&preferredName){const p=s.players.find(x=>x.name.toLowerCase()===preferredName.toLowerCase());if(p)s.playerId=p.player_id}const cid=r.match.course_id||r.course_id;if(cid){s.course=courses.find(c=>c.course_id===cid)||null;if(!s.course){try{const cr=await get({action:'getCourse',course_id:cid});if(cr.success)s.course=normalizeCourse(cr.course)}catch(_){}}}$('headerGameId').textContent=s.match.match_id||id;$('headerQr').hidden=false;page('matchPage');setMode('F9');renderScorecard();await refresh()}
+async function enter(id,preferredName){const r=await get({action:'getMatch',match_id:id});if(!r.success)return toast(r.error||'Load game failed');s.match=r.match;s.players=r.players||[];if(!s.playerId&&preferredName){const p=s.players.find(x=>x.name.toLowerCase()===preferredName.toLowerCase());if(p)s.playerId=p.player_id}const cid=r.match.course_id||r.course_id;if(cid){s.course=courses.find(c=>c.course_id===cid)||null;if(!s.course){try{const cr=await get({action:'getCourse',course_id:cid});if(cr.success)s.course=normalizeCourse(cr.course)}catch(_){}}}$('headerGameId').textContent=s.match.match_id||id;$('headerQr').hidden=false;page('matchPage');setMode('F9');renderScorecard();await refresh();await loadHandicapMatrix()}
 
 function holeInfo(hole){return s.course?.holes?.find(x=>x.hole===hole)||null}
 function scoreFor(playerId,hole){return s.scores.find(x=>x.player_id===playerId&&+x.hole===hole)||null}
@@ -142,6 +208,15 @@ window.selectScore=n=>{document.querySelectorAll('.score-choice').forEach(b=>b.c
 function closeModal(){$('scoreModal').hidden=true;delete $('scoreModal').dataset.score}
 $('closeModal').onclick=closeModal;$('modalCancel').onclick=closeModal;
 $('modalSave').onclick=async()=>{const score=Number($('scoreModal').dataset.score);if(!score)return toast('Select score');$('modalSave').disabled=true;try{const r=await post({action:'saveScore',match_id:s.match.match_id,player_id:s.playerId,hole:modalHole,score,up:$('modalUp').checked,submitted_by:s.playerId});if(!r.success)return toast(r.error||'Save failed');closeModal();s.hole=modalHole;await refresh();toast('Saved')}catch(e){toast('Save failed: '+e.message)}finally{$('modalSave').disabled=false}};
+
+
+async function loadHandicapMatrix(){
+  if(!s.match)return;
+  try{
+    const r=await get({action:'getHandicapMatrix',match_id:s.match.match_id});
+    if(r.success)s.handicapMatrix=r.matrix||null;
+  }catch(e){}
+}
 
 async function refresh(){if(!s.match)return;try{const r=await get({action:'getScores',match_id:s.match.match_id});if(r.success){s.scores=r.scores||[];renderScorecard()}}catch(e){}}
 $('prev').onclick=()=>{const hs=currentHoles();const i=hs.indexOf(s.hole);if(i>0){s.hole=hs[i-1];renderScorecard()}};

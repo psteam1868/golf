@@ -29,6 +29,8 @@
     <label>Course<select id="course"></select></label>
     <label>Players</label><div id="countBtns" class="choice"></div>
     <div id="playerNames"></div>
+    <button id="openMatrix" class="secondary">Handicap Matrix</button>
+    <div id="matrixStatus" class="matrix-status">Set pairwise strokes before Start.</div>
     <button id="create">Start</button>
   </div>
 </section>
@@ -58,6 +60,14 @@
     <div class="modal-actions"><button id="modalCancel" class="secondary">Cancel</button><button id="modalSave">Save</button></div>
   </div>
 </div>
+<div id="matrixModal" class="modal" hidden>
+  <div class="modal-box matrix-box">
+    <div class="modal-head"><b>Handicap Matrix</b><button id="closeMatrix" class="icon-btn">×</button></div>
+    <p class="matrix-help">Enter the strokes the row player gives the column player. The reverse side is automatic.</p>
+    <div id="matrixGrid" class="matrix-grid"></div>
+    <div class="modal-actions"><button id="matrixCancel" class="secondary">Cancel</button><button id="matrixSave">Save</button></div>
+  </div>
+</div>
 <div id="toast"></div>
 <script>window.GOLF_API_URL="https://script.google.com/macros/s/AKfycbyALu60ZEkfMGeha-yDUKPka1wgFS3Ry_4TuB3HbGwdMP9bbVa6NmQ8NG4xuRQTZjRo/exec";</script>
-<script src="app.js?v=7.5"></script></body></html>
+<script src="app.js?v=8.0"></script></body></html>
