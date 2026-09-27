@@ -44,7 +44,87 @@ function matchHandicapLabel(viewer,opp){const mode=state.currentMode==='B9'?'B9'
 function scoreView(){return shell(`<main class="score-page"><div class="mode-tabs">${['F9','B9','Baccarat'].map(m=>`<button class="mode-tab ${state.currentMode===m?'active':''}" onclick="setMode('${m}')">${m}</button>`).join('')}</div>${state.currentMode==='Baccarat'?baccaratTable():matchTable()}${state.editingScores?bulkScoreEditor():state.editingScore?scoreEditor():''}${state.qr?qrModal():''}</main>`,{qr:true})}
 function holesForMode(){return state.currentMode==='F9'?Array.from({length:9},(_,i)=>i+1):state.currentMode==='B9'?Array.from({length:9},(_,i)=>i+10):Array.from({length:18},(_,i)=>i+1)}
 function matchTable(){const holes=holesForMode();return `<div class="score-scroll"><table class="score-table"><thead><tr><th>Holes</th>${holes.map(h=>`<th>${h}</th>`).join('')}</tr><tr><th>Index</th>${holes.map(h=>`<th>${courseHole(h)?.si||''}</th>`).join('')}</tr><tr><th>PAR</th>${holes.map(h=>`<th>${courseHole(h)?.par||''}</th>`).join('')}</tr></thead><tbody>${state.players.map((p,pi)=>`<tr class="player-row ${pi%2?'alt':''}"><td class="player-name">${esc(p.name)}${p.player_id===state.currentPlayer.player_id?'<div class="you">YOU</div>':`<div class="match-hcp">${matchHandicapLabel(state.currentPlayer.player_id,p.player_id)}</div>`}</td>${holes.map(h=>`<td class="score-cell ${cellClass(state.currentPlayer.player_id,p.player_id,h)} ${((p.player_id===state.currentPlayer.player_id)||state.isAdmin)?'editable':''}" onclick="editScore('${p.player_id}',${h})">${scoreMarkup(p.player_id,h)}</td>`).join('')}</tr>${p.player_id!==state.currentPlayer.player_id?`<tr class="stroke-row ${pi%2?'alt':''}"><td><span class="match-status-label">MATCH</span></td>${holes.map(h=>{const ms=matchStatus(state.currentPlayer.player_id,p.player_id,h);return `<td class="match-status-cell ${matchStatusClass(ms)}">${ms}</td>`}).join('')}</tr>`:''}`).join('')}</tbody></table></div><div class="score-tools"><button class="nav-btn" onclick="prevHole()">‹ Prev</button><span class="hole-count">Hole ${state.currentHole} / ${state.currentMode==='F9'?9:state.currentMode==='B9'?18:18}</span><button class="nav-btn" onclick="nextHole()">Next ›</button></div>${resultPanel()}`}
-function resultForPair(aid,bid,mode){const holes=mode==='F9'?Array.from({length:9},(_,i)=>i+1):Array.from({length:9},(_,i)=>i+10);const {decisionAt,finalMargin}=pairOutcomes(aid,bid,mode);let game=finalMargin>0?3:finalMargin<0?-3:-1;let tommy=0,buy=0;if(finalMargin!==0&&decisionAt!==null&&decisionAt<holes[holes.length-1]){tommy=finalMargin>0?1:-1;buy=finalMargin>0?1:-1}const bonus=bonusBreakdown(aid,mode).bonus-bonusBreakdown(bid,mode).bonus;return {game,tommy,buy,bonus,total:game+tommy+buy+bonus}}
+const RESULT_TABLES={
+  1:{'W':4,'S':3,'L':-1},
+  2:{'WW':5,'WL':2,'WS':4,'LW':3,'LS':2,'LL':-1,'SW':5,'SS':3,'SL':1},
+  3:{'WWW':5,'WWS':5,'WWL':4,'WLW':4,'WLL':1,'WLS':2,'WSW':5,'WSL':2,'WSS':4,'SWW':5,'SWL':3,'SWS':5,'SLW':3,'SLL':1,'SLS':1,'SSW':5,'SSL':1,'SSS':3,'LWW':5,'LWL':1,'LWS':3,'LLW':2,'LLL':-1,'LLS':2,'LSW':4,'LSL':1,'LSS':2},
+  4:{
+    'WWWW':5,'WWWL':5,'WWWS':5,'WWLW':5,'WWLL':2,'WWLS':4,'WWSW':5,'WWSL':4,'WWSS':5,
+    'WLWW':5,'WLWL':2,'WLWS':4,'WLLW':2,'WLLL':1,'WLLS':1,'WLSW':4,'WLSL':1,'WLSS':2,
+    'WSWW':5,'WSWL':4,'WSWS':5,'WSLW':4,'WSLL':1,'WSLS':2,'WSSW':5,'WSSL':2,'WSSS':4,
+    'SWWW':5,'SWWL':5,'SWWS':5,'SWLW':5,'SWLL':1,'SWLS':3,'SWSW':5,'SWSL':3,'SWSS':5,
+    'SLWW':5,'SLWL':1,'SLWS':3,'SLLW':1,'SLLL':1,'SLLS':1,'SLSW':3,'SLSL':1,'SLSS':1,
+    'SSWW':5,'SSWL':1,'SSWS':3,'SSLW':1,'SSLL':1,'SSLS':1,'SSSW':3,'SSSL':1,'SSSS':3,
+    'LWWW':5,'LWWL':3,'LWWS':5,'LWLW':3,'LWLL':1,'LWLS':1,'LWSW':5,'LWSL':1,'LWSS':3,
+    'LSWW':5,'LSWL':2,'LSWS':4,'LSLW':2,'LSLL':1,'LSLS':1,'LSSW':4,'LSSL':1,'LSSS':2,
+    'LLWW':4,'LLWL':1,'LLWS':2,'LLLW':2,'LLLL':-1,'LLLS':2,'LLSW':3,'LLSL':1,'LLSS':2
+  }
+};
+function pairHoleResults(aid,bid,mode){
+  const holes=mode==='F9'?Array.from({length:9},(_,i)=>i+1):Array.from({length:9},(_,i)=>i+10);
+  let margin=0; const rows=[];
+  for(const h of holes){
+    const a=Number(scoreFor(aid,h).score), b=Number(scoreFor(bid,h).score); let r='S';
+    if(a&&b) r=relative(aid,bid,h);
+    if(r==='W') margin++; else if(r==='L') margin--;
+    const remainingAfter=holes[holes.length-1]-h;
+    rows.push({h,r,margin,remainingAfter});
+  }
+  return {holes,rows};
+}
+function resultForPair(aid,bid,mode){
+  const {holes,rows}=pairHoleResults(aid,bid,mode);
+  let decisionIndex=null;
+  let startMargin=0;
+  for(let i=0;i<rows.length;i++){
+    const before=i===0?0:rows[i-1].margin;
+    const remainingBefore=holes.length-i;
+    if(Math.abs(rows[i].margin)>rows[i].remainingAfter){
+      decisionIndex=i; startMargin=before; break;
+    }
+  }
+  let game,tommy,buy;
+  if(decisionIndex===null){
+    // No early decision. If the final hole decides the game, the 1UP/1TOGO
+    // table applies; otherwise an all-square finish is Game -1.
+    const final=rows[rows.length-1];
+    const before=rows.length>1?rows[rows.length-2].margin:0;
+    if(Math.abs(before)===1){
+      const mirror=c=>c==='W'?'L':c==='L'?'W':'S';
+      const total=before>0 ? RESULT_TABLES[1][final.r] : -RESULT_TABLES[1][mirror(final.r)];
+      game=final.margin>0?3:final.margin<0?-3:0;
+      tommy=total-game;
+      buy=0;
+    }else{
+      game=-1; tommy=0; buy=0;
+    }
+  }else{
+    const len=holes.length-decisionIndex;
+    const seq=rows.slice(decisionIndex).map(x=>x.r).join('');
+    const absStart=Math.min(4,Math.max(1,Math.abs(startMargin)));
+    const table=RESULT_TABLES[absStart];
+    let total=table&&table[seq];
+    if(total==null){
+      // Mirror the known lookup when the other side is leading.
+      const mirror=seq.replace(/[WL]/g,c=>c==='W'?'L':'W');
+      const t=table&&table[mirror];
+      total=t==null?0:-t;
+    }
+    // The lookup is the complete Game+Tommy+Buy total. Keep the component
+    // columns consistent with the agreed rule: Game is ±3 when decided,
+    // and the remaining amount is Tommy+Buy.
+    game=startMargin>0?3:-3;
+    const rem=total-game;
+    // Buy starts on the hole after Game is decided. Reconstruct final Buy
+    // state from outcomes after the decision hole.
+    let bmargin=0;
+    for(let i=decisionIndex+1;i<rows.length;i++){if(rows[i].r==='W')bmargin++;else if(rows[i].r==='L')bmargin--;}
+    buy=bmargin>0?1:bmargin<0?-1:0;
+    tommy=rem-buy;
+  }
+  const bonus=bonusBreakdown(aid,mode).bonus-bonusBreakdown(bid,mode).bonus;
+  return {game,tommy,buy,bonus,total:game+tommy+buy+bonus};
+}
 function resultForOpponent(pid,mode){const me=state.currentPlayer.player_id;return resultForPair(me,pid,mode)}
 function resultPanel(){const mode=state.currentMode==='B9'?'B9':'F9';const pairs=[];for(let i=0;i<state.players.length;i++){for(let j=i+1;j<state.players.length;j++){const a=state.players[i],b=state.players[j];const r=resultForPair(a.player_id,b.player_id,mode);pairs.push({label:`${a.name} v ${b.name}`,r})}}return `<div class="result-card"><div class="result-title">${mode==='F9'?'Front 9 Result':'Back 9 Result'}</div><div class="result-scroll"><table class="result-table"><thead><tr><th>Opponent</th><th>Game</th><th>Tommy</th><th>Buy</th><th>Bonus</th><th>Total</th></tr></thead><tbody>${pairs.map(x=>{const r=x.r;return `<tr><td>${esc(x.label)}</td><td>${fmtSigned(r.game)}</td><td>${fmtSigned(r.tommy)}</td><td>${fmtSigned(r.buy)}</td><td>${fmtSigned(r.bonus)}</td><td><b>${fmtSigned(r.total)}</b></td></tr>`}).join('')}</tbody></table></div></div>`}
 function bonusBreakdown(pid,mode){const holes=mode==='F9'?Array.from({length:9},(_,i)=>i+1):Array.from({length:9},(_,i)=>i+10);const data={double3:0,double5:0,birdie:0,eagle:0,hio:0,bonus:0};const rows=holes.map(h=>{const score=Number(scoreFor(pid,h).score);const par=Number(courseHole(h)?.par||0);return {score,par}});const par3=rows.filter(x=>x.par===3);const par5=rows.filter(x=>x.par===5);if(par3.length===2&&par3.every(x=>x.score>0&&x.score<=x.par))data.double3=1;if(par5.length===2&&par5.every(x=>x.score>0&&x.score<=x.par))data.double5=1;rows.forEach(x=>{if(!x.score||!x.par)return;if(x.par===3&&x.score===1){data.hio+=12;return}if(x.score<=x.par-2){data.eagle+=6;return}if(x.score===x.par-1)data.birdie+=1});data.bonus=data.double3+data.double5+data.birdie+data.eagle+data.hio;return data}
