@@ -1,13 +1,19 @@
-# Golf Game PWA v11
+# Golf Game PWA v13
 
-Updates:
-- Handicap Matrix uses a mobile scroll/select picker from -10 to +10.
-- Negative = give strokes (red), 0 = square (black), positive = receive strokes (blue).
-- Reverse handicap is automatic.
-- Admin can edit any player's score; normal players can edit only their own score.
-- Match handicap data is stored in the HANDICAPS sheet and returned with getMatch.
-- 18-hole handicap is split between F9/B9 as evenly as possible; -10/+10 displays -5/+5 in each nine, with the per-hole strokes assigned by Index within that nine.
-- Course data remains permanent.
-- PWA service worker uses versioned cache and network-first navigation to reduce stale updates.
+## Important fix
+Handicap is now saved as part of `createMatch` and the API returns `handicap_rows` as a verification count.
 
-Backend: replace the current Google Apps Script with `Golf_Game_Apps_Script_v11.gs`, run `setupDatabase()`, then deploy a new Web App version.
+For N players, the HANDICAPS sheet receives N*(N-1) rows (both directions for every pair). Example for 4 players: 12 rows.
+
+### HANDICAPS columns
+match_id | row_player_id | col_player_id | strokes | created_at | updated_at
+
+Negative = give strokes. Positive = receive strokes. Reverse direction is automatic.
+
+### Required Apps Script steps
+1. Replace the old Apps Script code with `Golf_Game_Apps_Script_v13.gs`.
+2. Run `setupDatabase()` once.
+3. Deploy a NEW Web App version using the same `/exec` URL deployment.
+4. Use the v13 PWA.
+
+The New Game flow now verifies that handicap rows were actually written. If not, it shows an explicit message telling you to run setupDatabase and redeploy the Apps Script.
