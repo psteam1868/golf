@@ -8,3 +8,18 @@
 @media(max-width:640px){.container{padding:16px 12px 36px}.player-grid{grid-template-columns:1fr}.home-title{font-size:30px}.matrix th,.matrix td{height:60px}.matrix th:first-child{min-width:92px}.handicap-select{width:58px}.score-table th,.score-table td{min-width:55px;width:55px}.score-table th:first-child,.score-table td:first-child{min-width:96px;width:96px}.result-card{margin-left:12px;margin-right:12px}}
 
 .stroke-total{margin-left:4px;font-size:10px;font-weight:900}.stroke-total.neg{color:var(--red)}.stroke-total.pos{color:var(--blue)}.stroke-total.zero{color:#111}
+
+/* v15 scorecard refinements */
+:root{--benefit-bg:#e8f2ff;--disadvantage-bg:#fff0f0}
+.score-cell.benefit{background:var(--benefit-bg)!important}
+.score-cell.disadvantage{background:var(--disadvantage-bg)!important}
+.circle,.double-circle{display:inline-flex;align-items:center;justify-content:center;position:relative;vertical-align:middle;box-sizing:border-box}
+.circle{width:30px;height:30px;border:2px solid #777;border-radius:50%}
+.double-circle{width:30px;height:30px;border:2px solid #777;border-radius:50%}
+.double-circle::after{content:"";position:absolute;inset:4px;border:2px solid currentColor;border-radius:50%}
+.double-circle:not(.red):not(.blue){color:#777}
+.stroke-row td{background:#fff!important}
+.stroke-row.alt td{background:#f2f4f3!important}
+.stroke-row td:first-child{background:inherit!important;color:#52615d;font-size:13px;letter-spacing:0;font-weight:900}
+.stroke-total{font-size:13px;margin-left:0}
+.bonus-card{margin-top:12px}

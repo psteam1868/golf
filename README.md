@@ -17,3 +17,6 @@ Negative = give strokes. Matrix input range is -14 to +14. Positive = receive st
 4. Use the v14 PWA.
 
 The New Game flow now verifies that handicap rows were actually written. If not, it shows an explicit message telling you to run setupDatabase and redeploy the Apps Script.
+
+
+UI refinement build: v15 (stroke display, half-stroke allocation, score-cell classification, bonus panel).
