@@ -19,3 +19,4 @@
   .matrix-grid>div{min-height:40px}
   .matrix-cell input{width:38px;height:32px}
 }
+\n\n/* v9 Handicap Matrix scoring result */\n.status-cell{gap:2px;flex-direction:column;line-height:1}.stroke-num{font-size:8px;font-weight:700}.match-state{font-size:9px;font-weight:800}.status-up{color:#1769aa}.status-dw{color:#c62828}.status-square{color:#8a9490}.blue-ring{border-color:#1976d2!important;box-shadow:0 0 0 2px #fff,0 0 0 4px #1976d2!important}.red-ring{border-color:#d32f2f!important;box-shadow:0 0 0 2px #fff,0 0 0 4px #d32f2f!important}\n

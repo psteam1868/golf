@@ -175,6 +175,55 @@ function baccaratTotal(p){
   return vals.length?vals.reduce((a,b)=>a+b,0):'—';
 }
 
+function matrixValue(a,b){
+  return Number(s.handicapMatrix?.[a]?.[b]||0);
+}
+function strokeOnHole(giverToReceiver, hole){
+  const n=Math.abs(Number(giverToReceiver)||0);
+  if(!n)return 0;
+  const si=Number(holeInfo(hole)?.si);
+  if(!Number.isFinite(si))return 0;
+  // N strokes are allocated to the lowest SI holes. For >18, wrap in the
+  // usual golf manner (not currently used by the UI, but safe).
+  const base=Math.floor(n/18); const rem=n%18; return base + (rem>0 && si<=rem ? 1 : 0);
+}
+function pairResult(me,opp,hole){
+  const a=scoreFor(me.player_id,hole), b=scoreFor(opp.player_id,hole);
+  if(!a || !b || a.score==='' || a.score==null || b.score==='' || b.score==null) return null;
+  const sa=Number(a.score), sb=Number(b.score);
+  const m=matrixValue(me.player_id,opp.player_id);
+  // Positive m means ME gives OPP m strokes. Negative means ME receives -m.
+  const oppAdj=sb + strokeOnHole(m,hole)*0; // kept explicit for readability
+  let netMe=sa, netOpp=sb;
+  if(m>0) netOpp=sb-strokeOnHole(m,hole);
+  else if(m<0) netMe=sa-strokeOnHole(-m,hole);
+  if(netMe<netOpp)return 'W';
+  if(netMe>netOpp)return 'L';
+  return 'S';
+}
+function pairState(me,opp,uptoHole){
+  let state=0;
+  const holes=currentHoles().filter(h=>h<=uptoHole);
+  for(const h of holes){
+    const r=pairResult(me,opp,h);
+    if(r==='W')state++;
+    else if(r==='L')state--;
+  }
+  return state;
+}
+function statusText(n){
+  if(n>0)return `${n}UP`;
+  if(n<0)return `${Math.abs(n)}DW`;
+  return '—';
+}
+function statusClass(n){return n>0?'status-up':n<0?'status-dw':'status-square'}
+function scoreRingClass(me,opp,h,val){
+  const r=pairResult(me,opp,h);
+  if(r==='W')return ' double-ring blue-ring';
+  if(r==='L')return ' double-ring red-ring';
+  if(r==='S')return ' single-ring';
+  return '';
+}
 function scoreCell(p,h,mine,rowIndex=0){
   const rec=scoreFor(p.player_id,h);
   const val=rec&&rec.score!==''&&rec.score!=null?Number(rec.score):null;
@@ -185,16 +234,33 @@ function scoreCell(p,h,mine,rowIndex=0){
     if(val===par)ring=' single-ring';
     else if(val<par)ring=' double-ring';
   }
+  // For opponents, keep the one/double ring count based on PAR,
+  // and use blue/red to show the P1-vs-opponent advantage.
+  const minePlayer=s.players.find(x=>x.player_id===s.playerId)||s.players[0];
+  if(!mine && minePlayer && val!==null){
+    const rr=pairResult(minePlayer,p,h);
+    if(rr==='W')ring += ' blue-ring';
+    else if(rr==='L')ring += ' red-ring';
+  }
   const bg=(rowIndex%2===1)?' player-bg-gray':' player-bg-white';
   const inner=val===null?esc(display):`<span class="score-number${ring}">${esc(display)}</span>`;
   if(mine)return `<button class="score-cell mine-score${bg} ${h===s.hole?'current':''}" data-hole="${h}" onclick="openScore(${h})">${inner}</button>`;
   return `<div class="score-cell opponent-score${bg}">${inner}</div>`;
 }
+function strokeDisplay(me,opp,h){
+  const m=matrixValue(me.player_id,opp.player_id);
+  const st=strokeOnHole(m,h);
+  if(!st)return '—';
+  // From P1's view: positive means P1 gives stroke; negative means P1 receives.
+  return m>0?`-${st}`:`+${st}`;
+}
 function statusCell(p,h,rowIndex=0){
-  const n=Number(p.strokes&&p.strokes[h]);
+  const me=s.players.find(x=>x.player_id===s.playerId)||s.players[0];
   const bg=(rowIndex%2===1)?' player-bg-gray':' player-bg-white';
-  if(Number.isFinite(n)&&n!==0)return `<div class="status-cell ${n>0?'stroke-plus':'stroke-minus'}${bg}">${n>0?'+':''}${n}</div>`;
-  return `<div class="status-cell neutral${bg}">—</div>`;
+  if(!me||p.player_id===me.player_id)return `<div class="status-cell neutral${bg}">—</div>`;
+  const n=pairState(me,p,h);
+  const stroke=strokeDisplay(me,p,h);
+  return `<div class="status-cell ${statusClass(n)}${bg}"><span class="stroke-num">${stroke}</span><span class="match-state">${statusText(n)}</span></div>`;
 }
 function baccaratCell(p,h,rowIndex,mine){
   const bg=rowIndex%2===1?' player-bg-gray':' player-bg-white';
