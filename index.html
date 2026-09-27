@@ -5,7 +5,7 @@
 <link rel="manifest" href="manifest.json"><link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="stylesheet" href="style.css"><title>Golf Game</title></head>
 <body>
-<header><b>🏌️ Golf Game</b><button id="install" hidden>Install</button></header>
+<header><b>🏌️ Golf Game</b><span id="headerGameId"></span><button id="install" hidden>Install</button></header>
 <main>
 <section id="home">
 <h1>Golf Game</h1>
@@ -32,14 +32,13 @@
 <div class="card"><h3>Saved Courses</h3><div id="saved"></div></div></section>
 
 <section id="matchPage" hidden><button class="back">‹ Home</button>
-<div class="match-top"><div><h2 id="matchId"></h2><div id="courseName"></div></div><div class="view-label">P1 View</div></div>
+<div class="match-top"><div class="match-id-center"><h2 id="matchId"></h2></div><div class="view-label">P1 View</div></div>
 <div class="card scorecard-card">
   <div class="score-scroll" id="scoreScroll">
     <div class="score-grid" id="scoreGrid"></div>
   </div>
 </div>
 <div class="hole-nav"><button id="prev">‹ Prev</button><div><b>Hole <span id="hole">1</span> / 18</b></div><button id="next">Next ›</button></div>
-<div class="card"><h3>Players</h3><div id="players"></div></div>
 </section>
 </main>
 
@@ -53,4 +52,4 @@
 </div>
 <div id="toast"></div>
 <script>window.GOLF_API_URL="https://script.google.com/macros/s/AKfycbyALu60ZEkfMGeha-yDUKPka1wgFS3Ry_4TuB3HbGwdMP9bbVa6NmQ8NG4xuRQTZjRo/exec";</script>
-<script src="app.js?v=7.1"></script></body></html>
+<script src="app.js?v=7.2"></script></body></html>

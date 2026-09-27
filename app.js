@@ -33,7 +33,7 @@ $('create').onclick=async()=>{const gameId=$('gameId').value.trim(),admin=$('adm
 
 $('join').onclick=async()=>{const match_id=$('mid').value.trim(),name=$('name').value.trim();if(!match_id||!name)return toast('Enter Game ID and name');$('join').disabled=true;try{const r=await post({action:'joinMatch',match_id,name});if(!r.success)return toast(r.error||'Join failed');const p=r.player||{};s.playerId=p.player_id||r.player_id||null;await enter(r.match_id||match_id,name);toast('Joined')}catch(e){toast('Join failed: '+e.message)}finally{$('join').disabled=false}};
 
-async function enter(id,preferredName){const r=await get({action:'getMatch',match_id:id});if(!r.success)return toast(r.error||'Load game failed');s.match=r.match;s.players=r.players||[];if(!s.playerId&&preferredName){const p=s.players.find(x=>x.name.toLowerCase()===preferredName.toLowerCase());if(p)s.playerId=p.player_id}const cid=r.match.course_id||r.course_id;if(cid){s.course=courses.find(c=>c.course_id===cid)||null;if(!s.course){try{const cr=await get({action:'getCourse',course_id:cid});if(cr.success)s.course=normalizeCourse(cr.course)}catch(_){}}}$('matchId').textContent=s.match.match_id||id;$('courseName').textContent=s.course?.course_name||'Course not found';page('matchPage');renderScorecard();await refresh()}
+async function enter(id,preferredName){const r=await get({action:'getMatch',match_id:id});if(!r.success)return toast(r.error||'Load game failed');s.match=r.match;s.players=r.players||[];if(!s.playerId&&preferredName){const p=s.players.find(x=>x.name.toLowerCase()===preferredName.toLowerCase());if(p)s.playerId=p.player_id}const cid=r.match.course_id||r.course_id;if(cid){s.course=courses.find(c=>c.course_id===cid)||null;if(!s.course){try{const cr=await get({action:'getCourse',course_id:cid});if(cr.success)s.course=normalizeCourse(cr.course)}catch(_){}}}$('matchId').textContent=s.match.match_id||id;$('headerGameId').textContent=s.match.match_id||id;page('matchPage');renderScorecard();await refresh()}
 
 function holeInfo(hole){return s.course?.holes?.find(x=>x.hole===hole)||null}
 function scoreFor(playerId,hole){return s.scores.find(x=>x.player_id===playerId&&+x.hole===hole)||null}
@@ -54,7 +54,7 @@ function renderScorecard(){
   if(mine){html+='<div class="label player-label mine-label">'+esc(mine.name)+'<small>YOU</small></div>'+holes.map(h=>scoreCell(mine,h,true)).join('');}
   s.players.filter(p=>p.player_id!==s.playerId).forEach(p=>{
     html+='<div class="label player-label opponent-label">'+esc(p.name)+'</div>'+holes.map(h=>scoreCell(p,h,false)).join('');
-    html+='<div class="label status-label">P1 vs '+esc(p.name)+'</div>'+holes.map(h=>statusCell(p,h)).join('');
+    html+='<div class="label status-label">STROKES</div>'+holes.map(h=>statusCell(p,h)).join('');
   });
   grid.innerHTML=html;
   $('hole').textContent=s.hole;
@@ -62,7 +62,10 @@ function renderScorecard(){
 
 function scoreCell(p,h,mine){const rec=scoreFor(p.player_id,h);const val=rec&&rec.score!==''&&rec.score!=null?rec.score:'–';if(mine)return `<button class="score-cell mine-score ${h===s.hole?'current':''}" data-hole="${h}" onclick="openScore(${h})">${esc(val)}</button>`;return `<div class="score-cell opponent-score">${esc(val)}</div>`}
 function statusCell(p,h){
-  // v7 is the visual scorecard. Handicap Matrix is the next layer, so no W/DW/UP/DW is inferred from raw scores.
+  // Handicap Matrix will supply the signed stroke value.
+  // Positive = P1 receives a stroke; negative = P1 gives a stroke.
+  const n = Number(p.strokes && p.strokes[h]);
+  if(Number.isFinite(n) && n!==0) return `<div class="status-cell ${n>0?'stroke-plus':'stroke-minus'}">${n>0?'+':''}${n}</div>`;
   return '<div class="status-cell neutral">—</div>';
 }
 
