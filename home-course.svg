@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" preserveAspectRatio="none">
+<defs>
+ <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7fcfa"/><stop offset="1" stop-color="#eef8f3"/></linearGradient>
+ <linearGradient id="hill" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#d8eee0"/><stop offset="1" stop-color="#b7d9c2"/></linearGradient>
+</defs>
+<rect width="900" height="420" fill="url(#sky)"/>
+<path d="M0 285 Q150 205 310 275 T610 255 T900 275 V420 H0Z" fill="#c7e3cf"/>
+<path d="M0 325 Q170 255 360 325 T690 305 T900 320 V420 H0Z" fill="url(#hill)" opacity=".95"/>
+<path d="M330 420 Q410 315 485 300 Q560 290 650 420Z" fill="#edf5e9" opacity=".95"/>
+<g fill="#8fc39d" opacity=".72">
+ <path d="M70 285 q8-45 38-58 q30 13 38 58z"/><path d="M120 295 q7-39 33-50 q26 11 33 50z"/>
+ <path d="M770 285 q8-46 38-59 q30 13 38 59z"/><path d="M820 295 q7-39 33-50 q26 11 33 50z"/>
+</g>
+<path d="M690 300 V225" stroke="#6e8879" stroke-width="4"/>
+<path d="M690 225 l55 16 -55 18z" fill="#74b88a"/>
+<circle cx="690" cy="302" r="6" fill="#6e8879"/>
+</svg>

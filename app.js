@@ -54,40 +54,88 @@ function setMode(mode){s.mode=mode;$('modeF9').classList.toggle('active',mode===
 window.setMode=setMode;
 $('modeF9').onclick=()=>setMode('F9');$('modeB9').onclick=()=>setMode('B9');$('modeBaccarat').onclick=()=>setMode('Baccarat');
 
+function makeRow(cells, cls=''){
+  return `<div class="score-row ${cls}">${cells.join('')}</div>`;
+}
+function labelCell(text, cls=''){
+  return `<div class="score-label ${cls}">${text}</div>`;
+}
+function dataCell(text, cls=''){
+  return `<div class="score-data ${cls}">${text}</div>`;
+}
 function renderScorecard(){
-  const grid=$('scoreGrid');if(!grid)return;
+  const grid=$('scoreGrid'); if(!grid)return;
   const holes=currentHoles();
   const mine=s.players.find(p=>p.player_id===s.playerId)||s.players[0];
   if(!s.playerId&&mine)s.playerId=mine.player_id;
-  $('headerGameId').textContent=s.match?.match_id||'';$('headerQr').hidden=!s.match;
-  let html='<div class="corner score-head-label">Holes</div>'+holes.map(h=>`<div class="head-hole ${h===s.hole?'active':''}">${h}</div>`).join('');
-  html+='<div class="label meta-label">Index</div>'+holes.map(h=>`<div class="meta info-meta">${holeInfo(h)?.si??'—'}</div>`).join('');
-  html+='<div class="label meta-label">PAR</div>'+holes.map(h=>`<div class="meta info-meta">${holeInfo(h)?.par??'—'}</div>`).join('');
-  if(mine){html+='<div class="label player-label mine-label player-bg-white">'+esc(mine.name)+'<small>YOU</small></div>'+holes.map(h=>isBaccarat()?baccaratCell(mine,h,0,true):scoreCell(mine,h,true,0)).join('')}
-  s.players.filter(p=>p.player_id!==s.playerId).forEach((p,index)=>{const rowIndex=index+1;const bgClass=rowIndex%2===1?'player-bg-gray':'player-bg-white';html+='<div class="label player-label opponent-label '+bgClass+'">'+esc(p.name)+'</div>'+holes.map(h=>isBaccarat()?baccaratCell(p,h,rowIndex,false):scoreCell(p,h,false,rowIndex)).join('');if(!isBaccarat()){html+='<div class="label status-label '+bgClass+'">STROKES</div>'+holes.map(h=>statusCell(p,h,rowIndex)).join('')}});
+  $('headerGameId').textContent=s.match?.match_id||'';
+  $('headerQr').hidden=!s.match;
   if(isBaccarat()){
-    // The total column is part of the Baccarat scorecard. The calculation engine will populate it later.
-    html+='<div class="label player-label total-label player-bg-white">TOTAL</div><div class="baccarat-total baccarat-grand">—</div>';
-    // Put total cells after all player rows using a separate grid is not possible in CSS grid without columns.
-    // Re-render below using a dedicated Baccarat grid for a clean 19th column.
-    grid.innerHTML=renderBaccaratGrid(holes,mine);return;
+    grid.innerHTML=renderBaccaratGrid(holes,mine);
+  }else{
+    const rows=[];
+    rows.push(makeRow([labelCell('Holes','top-label')].concat(holes.map(h=>dataCell(h,`top-cell ${h===s.hole?'active':''}`)))));
+    rows.push(makeRow([labelCell('Index','top-label')].concat(holes.map(h=>dataCell(holeInfo(h)?.si??'—','top-cell')))));
+    rows.push(makeRow([labelCell('PAR','top-label')].concat(holes.map(h=>dataCell(holeInfo(h)?.par??'—','top-cell')))));
+    if(mine){
+      rows.push(makeRow([labelCell(`${esc(mine.name)}<small>YOU</small>`,'player-label mine-label player-bg-white')].concat(holes.map(h=>scoreCell(mine,h,true,0)))));
+    }
+    s.players.filter(p=>p.player_id!==s.playerId).forEach((p,index)=>{
+      const bgClass=index%2===0?'player-bg-gray':'player-bg-white';
+      rows.push(makeRow([labelCell(esc(p.name),'player-label '+bgClass)].concat(holes.map(h=>scoreCell(p,h,false,index+1))), 'opponent-row '+bgClass));
+      rows.push(makeRow([labelCell('STROKES','status-label '+bgClass)].concat(holes.map(h=>statusCell(p,h,index+1))), 'status-row '+bgClass));
+    });
+    grid.innerHTML=rows.join('');
   }
-  grid.innerHTML=html;$('hole').textContent=s.hole;
+  $('hole').textContent=s.hole;
 }
 
 function renderBaccaratGrid(holes,mine){
   const rows=[];
-  rows.push('<div class="corner score-head-label">Holes</div>'+holes.map(h=>`<div class="head-hole ${h===s.hole?'active':''}">${h}</div>`).join('')+'<div class="head-hole total-head">Total</div>');
-  rows.push('<div class="label meta-label">Index</div>'+holes.map(h=>`<div class="meta info-meta">${holeInfo(h)?.si??'—'}</div>`).join('')+'<div class="meta info-meta total-head">—</div>');
-  rows.push('<div class="label meta-label">PAR</div>'+holes.map(h=>`<div class="meta info-meta">${holeInfo(h)?.par??'—'}</div>`).join('')+'<div class="meta info-meta total-head">—</div>');
-  if(mine)rows.push('<div class="label player-label mine-label player-bg-white">'+esc(mine.name)+'<small>YOU</small></div>'+holes.map(h=>baccaratCell(mine,h,0,true)).join('')+'<div class="baccarat-total">—</div>');
-  s.players.filter(p=>p.player_id!==s.playerId).forEach((p,index)=>{const bg=index%2===0?'player-bg-gray':'player-bg-white';rows.push('<div class="label player-label opponent-label '+bg+'">'+esc(p.name)+'</div>'+holes.map(h=>baccaratCell(p,h,index+1,false)).join('')+'<div class="baccarat-total '+bg+'">—</div>')});
+  rows.push(makeRow([labelCell('Holes','top-label')].concat(holes.map(h=>dataCell(h,`top-cell ${h===s.hole?'active':''}`)), dataCell('Total','top-cell total-col'))));
+  rows.push(makeRow([labelCell('Index','top-label')].concat(holes.map(h=>dataCell(holeInfo(h)?.si??'—','top-cell')),dataCell('—','top-cell total-col'))));
+  rows.push(makeRow([labelCell('PAR','top-label')].concat(holes.map(h=>dataCell(holeInfo(h)?.par??'—','top-cell')),dataCell('—','top-cell total-col'))));
+  if(mine){
+    rows.push(makeRow([labelCell(`${esc(mine.name)}<small>YOU</small>`,'player-label mine-label player-bg-white')].concat(holes.map(h=>baccaratCell(mine,h,0,true)),dataCell(baccaratTotal(mine),'baccarat-total total-col'))));
+  }
+  s.players.filter(p=>p.player_id!==s.playerId).forEach((p,index)=>{
+    const bg=index%2===0?'player-bg-gray':'player-bg-white';
+    rows.push(makeRow([labelCell(esc(p.name),'player-label '+bg)].concat(holes.map(h=>baccaratCell(p,h,index+1,false)),dataCell(baccaratTotal(p),'baccarat-total total-col')), 'baccarat-player-row '+bg));
+  });
   return rows.join('');
 }
+function baccaratTotal(p){
+  const vals=s.scores.filter(x=>x.player_id===p.player_id&&x.points!=null).map(x=>Number(x.points)).filter(Number.isFinite);
+  return vals.length?vals.reduce((a,b)=>a+b,0):'—';
+}
 
-function scoreCell(p,h,mine,rowIndex=0){const rec=scoreFor(p.player_id,h);const val=rec&&rec.score!==''&&rec.score!=null?Number(rec.score):null;const display=val===null?'–':val;const par=Number(holeInfo(h)?.par);let ring='';if(val!==null&&Number.isFinite(par)){if(val===par)ring=' single-ring';else if(val<par)ring=' double-ring'}const bg=(rowIndex%2===1)?' player-bg-gray':' player-bg-white';const inner=val===null?esc(display):`<span class="score-number${ring}">${esc(display)}</span>`;if(mine)return `<button class="score-cell mine-score${bg} ${h===s.hole?'current':''}" data-hole="${h}" onclick="openScore(${h})">${inner}</button>`;return `<div class="score-cell opponent-score${bg}">${inner}</div>`}
-function statusCell(p,h,rowIndex=0){const n=Number(p.strokes&&p.strokes[h]);const bg=(rowIndex%2===1)?' player-bg-gray':' player-bg-white';if(Number.isFinite(n)&&n!==0)return `<div class="status-cell ${n>0?'stroke-plus':'stroke-minus'}${bg}">${n>0?'+':''}${n}</div>`;return `<div class="status-cell neutral${bg}">—</div>`}
-function baccaratCell(p,h,rowIndex,mine){const bg=rowIndex%2===1?' player-bg-gray':' player-bg-white';return `<div class="baccarat-cell${bg}">—</div>`}
+function scoreCell(p,h,mine,rowIndex=0){
+  const rec=scoreFor(p.player_id,h);
+  const val=rec&&rec.score!==''&&rec.score!=null?Number(rec.score):null;
+  const display=val===null?'–':val;
+  const par=Number(holeInfo(h)?.par);
+  let ring='';
+  if(val!==null&&Number.isFinite(par)){
+    if(val===par)ring=' single-ring';
+    else if(val<par)ring=' double-ring';
+  }
+  const bg=(rowIndex%2===1)?' player-bg-gray':' player-bg-white';
+  const inner=val===null?esc(display):`<span class="score-number${ring}">${esc(display)}</span>`;
+  if(mine)return `<button class="score-cell mine-score${bg} ${h===s.hole?'current':''}" data-hole="${h}" onclick="openScore(${h})">${inner}</button>`;
+  return `<div class="score-cell opponent-score${bg}">${inner}</div>`;
+}
+function statusCell(p,h,rowIndex=0){
+  const n=Number(p.strokes&&p.strokes[h]);
+  const bg=(rowIndex%2===1)?' player-bg-gray':' player-bg-white';
+  if(Number.isFinite(n)&&n!==0)return `<div class="status-cell ${n>0?'stroke-plus':'stroke-minus'}${bg}">${n>0?'+':''}${n}</div>`;
+  return `<div class="status-cell neutral${bg}">—</div>`;
+}
+function baccaratCell(p,h,rowIndex,mine){
+  const bg=rowIndex%2===1?' player-bg-gray':' player-bg-white';
+  const rec=scoreFor(p.player_id,h);
+  const pts=rec&&rec.points!=null?Number(rec.points):null;
+  return `<div class="baccarat-cell${bg}">${Number.isFinite(pts)?pts:'—'}</div>`;
+}
 
 window.openScore=hole=>{if(!s.playerId)return toast('Player not found');if(isBaccarat())return toast('Baccarat points will be calculated after the Baccarat rules are connected');modalHole=hole;const rec=scoreFor(s.playerId,hole);$('modalTitle').textContent=`Hole ${hole} · Score`;$('modalUp').checked=!!rec?.up;$('scoreChoices').innerHTML=Array.from({length:12},(_,i)=>{const n=i+1;return `<button type="button" class="score-choice ${Number(rec?.score)===n?'selected':''}" onclick="selectScore(${n})">${n}</button>`}).join('');$('scoreModal').hidden=false};
 window.selectScore=n=>{document.querySelectorAll('.score-choice').forEach(b=>b.classList.toggle('selected',Number(b.textContent)===n));$('scoreModal').dataset.score=n};
@@ -106,7 +154,12 @@ $('copyJoin').onclick=async()=>{const link=$('copyJoin').dataset.link||'';try{aw
 
 setInterval(()=>{if(!$('matchPage').hidden)refresh()},8000);
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('install')&&($('install').hidden=false)});
-if('serviceWorker' in navigator)navigator.serviceWorker.register('service-worker.js');
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    if(!sessionStorage.getItem('golf_sw_reloaded_v75')){sessionStorage.setItem('golf_sw_reloaded_v75','1');location.reload();}
+  });
+  navigator.serviceWorker.register('service-worker.js',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{});
+}
 
 // Restore QR join flow when a player scans a creator's QR code.
 (function initJoinLink(){const params=new URLSearchParams(location.search);if(params.get('join')==='1'){const gid=params.get('game')||'';$('joinPanel').hidden=false;$('mid').value=gid;prefillRememberedName(gid);page('home');}})();
