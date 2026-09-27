@@ -33,7 +33,7 @@ $('create').onclick=async()=>{const gameId=$('gameId').value.trim(),admin=$('adm
 
 $('join').onclick=async()=>{const match_id=$('mid').value.trim(),name=$('name').value.trim();if(!match_id||!name)return toast('Enter Game ID and name');$('join').disabled=true;try{const r=await post({action:'joinMatch',match_id,name});if(!r.success)return toast(r.error||'Join failed');const p=r.player||{};s.playerId=p.player_id||r.player_id||null;await enter(r.match_id||match_id,name);toast('Joined')}catch(e){toast('Join failed: '+e.message)}finally{$('join').disabled=false}};
 
-async function enter(id,preferredName){const r=await get({action:'getMatch',match_id:id});if(!r.success)return toast(r.error||'Load game failed');s.match=r.match;s.players=r.players||[];if(!s.playerId&&preferredName){const p=s.players.find(x=>x.name.toLowerCase()===preferredName.toLowerCase());if(p)s.playerId=p.player_id}const cid=r.match.course_id||r.course_id;if(cid){s.course=courses.find(c=>c.course_id===cid)||null;if(!s.course){try{const cr=await get({action:'getCourse',course_id:cid});if(cr.success)s.course=normalizeCourse(cr.course)}catch(_){}}}$('matchId').textContent=s.match.match_id||id;$('headerGameId').textContent=s.match.match_id||id;page('matchPage');renderScorecard();await refresh()}
+async function enter(id,preferredName){const r=await get({action:'getMatch',match_id:id});if(!r.success)return toast(r.error||'Load game failed');s.match=r.match;s.players=r.players||[];if(!s.playerId&&preferredName){const p=s.players.find(x=>x.name.toLowerCase()===preferredName.toLowerCase());if(p)s.playerId=p.player_id}const cid=r.match.course_id||r.course_id;if(cid){s.course=courses.find(c=>c.course_id===cid)||null;if(!s.course){try{const cr=await get({action:'getCourse',course_id:cid});if(cr.success)s.course=normalizeCourse(cr.course)}catch(_){}}}$('headerGameId').textContent=s.match.match_id||id;page('matchPage');renderScorecard();await refresh()}
 
 function holeInfo(hole){return s.course?.holes?.find(x=>x.hole===hole)||null}
 function scoreFor(playerId,hole){return s.scores.find(x=>x.player_id===playerId&&+x.hole===hole)||null}
@@ -48,25 +48,65 @@ function renderScorecard(){
   const holes=Array.from({length:18},(_,i)=>i+1);
   const mine=s.players.find(p=>p.player_id===s.playerId)||s.players[0];
   if(!s.playerId&&mine)s.playerId=mine.player_id;
-  let html='<div class="corner"></div>'+holes.map(h=>`<div class="head-hole ${h===s.hole?'active':''}">${h}</div>`).join('');
-  html+='<div class="label si-label">SI</div>'+holes.map(h=>`<div class="meta">${holeInfo(h)?.si??'—'}</div>`).join('');
-  html+='<div class="label par-label">PAR</div>'+holes.map(h=>`<div class="meta par-meta">${holeInfo(h)?.par??'—'}</div>`).join('');
-  if(mine){html+='<div class="label player-label mine-label">'+esc(mine.name)+'<small>YOU</small></div>'+holes.map(h=>scoreCell(mine,h,true)).join('');}
-  s.players.filter(p=>p.player_id!==s.playerId).forEach(p=>{
-    html+='<div class="label player-label opponent-label">'+esc(p.name)+'</div>'+holes.map(h=>scoreCell(p,h,false)).join('');
-    html+='<div class="label status-label">STROKES</div>'+holes.map(h=>statusCell(p,h)).join('');
+
+  // Game ID belongs in the top app header, never above the scorecard.
+  $('headerGameId').textContent = s.match?.match_id ? `Game ID: ${s.match.match_id}` : '';
+
+  // Scorecard top-left cell is explicitly labeled "Holes".
+  let html='<div class="corner score-head-label">Holes</div>'+
+    holes.map(h=>`<div class="head-hole ${h===s.hole?'active':''}">${h}</div>`).join('');
+
+  // The three information rows share a pale-cyan background.
+  html+='<div class="label meta-label index-label">Index</div>'+
+    holes.map(h=>`<div class="meta info-meta">${holeInfo(h)?.si??'—'}</div>`).join('');
+  html+='<div class="label meta-label par-label">PAR</div>'+
+    holes.map(h=>`<div class="meta info-meta">${holeInfo(h)?.par??'—'}</div>`).join('');
+
+  if(mine){
+    html+='<div class="label player-label mine-label player-bg-white">'+esc(mine.name)+'<small>YOU</small></div>'+
+      holes.map(h=>scoreCell(mine,h,true,0)).join('');
+  }
+
+  s.players.filter(p=>p.player_id!==s.playerId).forEach((p, index)=>{
+    const rowIndex=index+1; // opponent 1 = player row #2
+    const bgClass=rowIndex%2===1?'player-bg-gray':'player-bg-white';
+    html+='<div class="label player-label opponent-label '+bgClass+'">'+esc(p.name)+'</div>'+
+      holes.map(h=>scoreCell(p,h,false,rowIndex)).join('');
+    html+='<div class="label status-label '+bgClass+'">STROKES</div>'+
+      holes.map(h=>statusCell(p,h,rowIndex)).join('');
   });
+
   grid.innerHTML=html;
   $('hole').textContent=s.hole;
 }
 
-function scoreCell(p,h,mine){const rec=scoreFor(p.player_id,h);const val=rec&&rec.score!==''&&rec.score!=null?rec.score:'–';if(mine)return `<button class="score-cell mine-score ${h===s.hole?'current':''}" data-hole="${h}" onclick="openScore(${h})">${esc(val)}</button>`;return `<div class="score-cell opponent-score">${esc(val)}</div>`}
-function statusCell(p,h){
+function scoreCell(p,h,mine,rowIndex=0){
+  const rec=scoreFor(p.player_id,h);
+  const val=rec&&rec.score!==''&&rec.score!=null?Number(rec.score):null;
+  const display=val===null?'–':val;
+  const par=Number(holeInfo(h)?.par);
+  let ring='';
+  if(val!==null && Number.isFinite(par)){
+    if(val===par) ring=' single-ring';
+    else if(val<par) ring=' double-ring';
+  }
+  const bg=(rowIndex%2===1)?' player-bg-gray':' player-bg-white';
+  const inner=val===null?esc(display):`<span class="score-number${ring}">${esc(display)}</span>`;
+  if(mine){
+    return `<button class="score-cell mine-score${bg} ${h===s.hole?'current':''}" data-hole="${h}" onclick="openScore(${h})">${inner}</button>`;
+  }
+  return `<div class="score-cell opponent-score${bg}">${inner}</div>`;
+}
+
+function statusCell(p,h,rowIndex=0){
   // Handicap Matrix will supply the signed stroke value.
   // Positive = P1 receives a stroke; negative = P1 gives a stroke.
   const n = Number(p.strokes && p.strokes[h]);
-  if(Number.isFinite(n) && n!==0) return `<div class="status-cell ${n>0?'stroke-plus':'stroke-minus'}">${n>0?'+':''}${n}</div>`;
-  return '<div class="status-cell neutral">—</div>';
+  const bg=(rowIndex%2===1)?' player-bg-gray':' player-bg-white';
+  if(Number.isFinite(n) && n!==0){
+    return `<div class="status-cell ${n>0?'stroke-plus':'stroke-minus'}${bg}">${n>0?'+':''}${n}</div>`;
+  }
+  return `<div class="status-cell neutral${bg}">—</div>`;
 }
 
 window.openScore=hole=>{
